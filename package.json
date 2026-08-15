@@ -1,0 +1,20 @@
+{
+  "name": "beeper-whatsapp-url",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Open wa.me / api.whatsapp.com links as new WhatsApp chats in Beeper Desktop",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types src/server.ts",
+    "dev": "node --watch --experimental-strip-types src/server.ts",
+    "test": "node --experimental-strip-types --test test/whatsapp-url.test.ts test/server.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
