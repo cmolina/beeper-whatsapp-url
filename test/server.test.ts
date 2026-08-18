@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
 
-import { createApp } from '../src/server.ts';
+import { createApp, loadEnvConfig } from '../src/server.ts';
 
 interface StartRequest {
   accountID: string;
@@ -247,4 +248,20 @@ test('unknown path returns 404', async () => {
   const { status, body } = await getJson(`${appUrl}/nope?json=1`);
   assert.equal(status, 404);
   assert.equal(body.ok, false);
+});
+
+test('loadEnvConfig loads custom BEEPER_CONFIG_FILE', () => {
+  const tmpFile = `/tmp/test-beeper-config-${Date.now()}.env`;
+  try {
+    writeFileSync(tmpFile, 'TEST_ENV_VAR_CUSTOM=hello_world\n');
+    process.env.BEEPER_CONFIG_FILE = tmpFile;
+    loadEnvConfig();
+    assert.equal(process.env.TEST_ENV_VAR_CUSTOM, 'hello_world');
+  } finally {
+    delete process.env.BEEPER_CONFIG_FILE;
+    delete process.env.TEST_ENV_VAR_CUSTOM;
+    if (existsSync(tmpFile)) {
+      unlinkSync(tmpFile);
+    }
+  }
 });

@@ -16,6 +16,9 @@
 
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse, Server } from 'node:http';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { normalizePhone, parseWhatsAppUrl, UrlParseError } from './whatsapp-url.ts';
@@ -261,12 +264,43 @@ function escapeHtml(value: string): string {
   });
 }
 
+export function loadEnvConfig(): void {
+  const customPath = process.env.BEEPER_CONFIG_FILE;
+  if (customPath && existsSync(customPath)) {
+    try {
+      process.loadEnvFile(customPath);
+      return;
+    } catch {
+      // ignore
+    }
+  }
+
+  const candidates = [
+    join(process.cwd(), '.env'),
+    join(homedir(), '.config', 'beeper-whatsapp-url', 'config'),
+    join(homedir(), '.config', 'beeper-whatsapp-url', '.env'),
+    join(homedir(), '.beeper-whatsapp-url.env'),
+  ];
+
+  for (const file of candidates) {
+    if (existsSync(file)) {
+      try {
+        process.loadEnvFile(file);
+        break;
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- bootstrap
 
 const isMain =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
+  loadEnvConfig();
   const port = Number.parseInt(process.env.PORT ?? String(DEFAULT_PORT), 10);
   const host = process.env.HOST ?? '127.0.0.1';
   const config: BeeperConfig = {
