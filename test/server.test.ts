@@ -12,6 +12,11 @@ interface StartRequest {
   messageText?: string;
 }
 
+interface FocusRequest {
+  chatID: string;
+  draftText?: string;
+}
+
 interface JsonResponse {
   ok: boolean;
   error?: string;
@@ -19,6 +24,7 @@ interface JsonResponse {
   text?: string;
   chatId?: string;
   status?: string;
+  focus?: { success: boolean };
 }
 
 let beeper: Server;
@@ -26,6 +32,7 @@ let beeperUrl: string;
 let app: Server;
 let appUrl: string;
 const startRequests: StartRequest[] = [];
+const focusRequests: FocusRequest[] = [];
 let accountCalls = 0;
 
 function listen(server: Server): Promise<string> {
@@ -68,6 +75,18 @@ before(async () => {
         startRequests.push(JSON.parse(body) as StartRequest);
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ id: '!room:beeper.local', localChatID: '42', status: 'created' }));
+      });
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/v1/focus') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        focusRequests.push(JSON.parse(body) as FocusRequest);
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
       });
       return;
     }
@@ -120,6 +139,17 @@ test('short /wa/<number> route', async () => {
   assert.equal(status, 200);
   assert.equal(body.phone, '+56944897244');
   assert.equal(body.text, 'Hello');
+});
+
+test('focuses the chat with the draft text pre-filled', async () => {
+  const { status, body } = await getJson(`${appUrl}/wa/56944897244?text=Hola&json=1`);
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.deepEqual(body.focus, { success: true });
+  assert.deepEqual(focusRequests.at(-1), {
+    chatID: '!room:beeper.local',
+    draftText: 'Hola',
+  });
 });
 
 test('redirect parses a wa.me link end to end', async () => {

@@ -20,8 +20,8 @@ import { pathToFileURL } from 'node:url';
 
 import { normalizePhone, parseWhatsAppUrl, UrlParseError } from './whatsapp-url.ts';
 import type { ParsedWhatsAppUrl } from './whatsapp-url.ts';
-import { startWhatsAppChat } from './beeper-client.ts';
-import type { BeeperConfig, ChatStartResult } from './beeper-client.ts';
+import { startWhatsAppChat, focusChat } from './beeper-client.ts';
+import type { BeeperConfig, ChatStartResult, FocusResult } from './beeper-client.ts';
 
 const DEFAULT_PORT = 8765;
 
@@ -130,14 +130,15 @@ async function openChat(
   if (config.token === '') {
     throw new HttpError(
       500,
-      'BEEPER_ACCESS_TOKEN is not set. Get a token from Beeper Desktop (Settings -> API) and start the server with BEEPER_ACCESS_TOKEN=...',
+      'BEEPER_ACCESS_TOKEN is not set. Get a token from Beeper Desktop (Settings -> Integrations) and add it to the .env file.',
     );
   }
   const result: ChatStartResult = await startWhatsAppChat(config, parsed);
+  const focus: FocusResult = await focusChat(config, result.chatId, parsed.text);
   if (json) {
-    sendJson(res, 200, { ok: true, phone: parsed.phone, text: parsed.text, ...result });
+    sendJson(res, 200, { ok: true, phone: parsed.phone, text: parsed.text, ...result, focus });
   } else {
-    sendHtml(res, 200, successPage(parsed, result));
+    sendHtml(res, 200, successPage(parsed, result, focus));
   }
 }
 
@@ -198,15 +199,16 @@ function indexPage(config: BeeperConfig): string {
   );
 }
 
-function successPage(parsed: ParsedWhatsAppUrl, result: ChatStartResult): string {
+function successPage(parsed: ParsedWhatsAppUrl, result: ChatStartResult, focus: FocusResult): string {
   return page(
     'Opened in Beeper',
     `<h1>Opened in Beeper &check;</h1>
     <p>Chat with <strong>${escapeHtml(parsed.phone)}</strong>${
-      parsed.text !== undefined ? ` &mdash; ready to send: <em>${escapeHtml(parsed.text)}</em>` : ''
+      parsed.text !== undefined ? ` &mdash; draft ready: <em>${escapeHtml(parsed.text)}</em>` : ''
     } (${escapeHtml(result.status)})</p>
-    <p>Chat id: <code>${escapeHtml(result.chatId)}</code></p>
-    <a class="btn" href="beeper://focus">Bring Beeper to front</a>
+    <p>Chat id: <code>${escapeHtml(result.chatId)}</code>${
+      focus.success ? '' : ' &mdash; could not focus the chat'
+    }</p>
     <p><a href="/">Open another link</a></p>`,
   );
 }

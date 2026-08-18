@@ -2,7 +2,8 @@
  * Minimal client for the Beeper Desktop local API.
  *
  * Requires Beeper Desktop >= v4.2.808 running with the API enabled
- * (Settings -> API). Default endpoint: http://127.0.0.1:23373
+ * (Settings -> Integrations -> Approved connections). Default endpoint:
+ * http://127.0.0.1:23373
  */
 
 import type { ParsedWhatsAppUrl } from './whatsapp-url.ts';
@@ -16,6 +17,27 @@ export interface BeeperConfig {
 export interface ChatStartResult {
   readonly chatId: string;
   readonly status: string;
+}
+
+export interface FocusResult {
+  readonly success: boolean;
+}
+
+/** POST /v1/focus — bring Beeper to front, select the chat, pre-fill the draft. */
+export async function focusChat(
+  config: BeeperConfig,
+  chatId: string,
+  draftText?: string,
+): Promise<FocusResult> {
+  const body: Record<string, unknown> = { chatID: chatId };
+  if (draftText !== undefined) {
+    body.draftText = draftText;
+  }
+  const resp = await apiRequest<{ success?: boolean }>(config, '/v1/focus', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return { success: resp.success ?? false };
 }
 
 interface Account {
