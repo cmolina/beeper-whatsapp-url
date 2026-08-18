@@ -8,8 +8,8 @@
     "node": ">=22.6.0"
   },
   "scripts": {
-    "start": "node --experimental-strip-types src/server.ts",
-    "dev": "node --watch --experimental-strip-types src/server.ts",
+    "start": "node --env-file=.env --experimental-strip-types src/server.ts",
+    "dev": "node --watch --env-file=.env --experimental-strip-types src/server.ts",
     "test": "node --experimental-strip-types --test test/whatsapp-url.test.ts test/server.test.ts",
     "typecheck": "tsc --noEmit"
   },

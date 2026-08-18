@@ -27,12 +27,13 @@ npm install        # dev deps only (runtime is zero-dependency)
 
 ## Configure
 
-1. Open **Beeper Desktop → Settings → API**.
-2. Enable the API and copy the **access token**.
-3. Export it in the shell you'll run the server from:
+1. Open **Beeper Desktop → Settings → Integrations**.
+2. Click the **“+”** button next to **“Approved connections”**.
+3. Follow the instructions to create a token — make sure it has **read + write** permissions and **“Allow sensitive actions”** is checked (`chats/start` and `focus` require write).
+4. Put it in a `.env` file in the project root (auto-loaded by `npm start`, gitignored):
 
 ```bash
-export BEEPER_ACCESS_TOKEN=<your-token>
+BEEPER_ACCESS_TOKEN=<your-token>
 ```
 
 ## Run
@@ -65,7 +66,7 @@ To make `wa.me` clicks open here instead of WhatsApp, route `wa.me` / `api.whats
 
 | Variable | Default | Description |
 |---|---|---|
-| `BEEPER_ACCESS_TOKEN` | — (required) | Beeper Desktop API token (Settings → API) |
+| `BEEPER_ACCESS_TOKEN` | — (required, from `.env`) | Beeper Desktop API token (Settings → Integrations → “+” → Approved connections) |
 | `BEEPER_BASE_URL` | `http://127.0.0.1:23373` | Beeper Desktop local API base URL |
 | `BEEPER_WHATSAPP_ACCOUNT` | auto-detected | Override the WhatsApp `accountID` (e.g. `local-whatsapp_ba_…`) |
 | `PORT` | `8765` | Server listen port |
