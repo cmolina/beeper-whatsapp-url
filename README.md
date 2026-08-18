@@ -17,32 +17,46 @@ Runs on Node's native TypeScript type-stripping (`--experimental-strip-types`) �
 - **Node.js ≥ 22.6.0** (needed for `--experimental-strip-types`)
 - **Beeper Desktop ≥ v4.2.808**, running, with the **API enabled**
 
-## Install
+## Install & Run
+
+### Option 1: Homebrew (Recommended on macOS & Linux)
+
+```bash
+# 1. Install via Homebrew Tap
+brew install cmolina/tap/beeper-whatsapp-url
+
+# 2. Configure Beeper token
+mkdir -p ~/.config/beeper-whatsapp-url
+echo "BEEPER_ACCESS_TOKEN=<your-token>" > ~/.config/beeper-whatsapp-url/config
+
+# 3. Start background daemon (starts automatically on system boot)
+brew services start beeper-whatsapp-url
+```
+
+### Option 2: From Source
 
 ```bash
 git clone git@github.com:cmolina/beeper-whatsapp-url.git
 cd beeper-whatsapp-url
 npm install        # dev deps only (runtime is zero-dependency)
+
+# Configure token in .env or ~/.config/beeper-whatsapp-url/config
+echo "BEEPER_ACCESS_TOKEN=<your-token>" > .env
+
+# Run
+npm start          # listens on http://127.0.0.1:8765
 ```
 
-## Configure
+## Configure Token
 
 1. Open **Beeper Desktop → Settings → Integrations**.
 2. Click the **“+”** button next to **“Approved connections”**.
 3. Follow the instructions to create a token — make sure it has **read + write** permissions and **“Allow sensitive actions”** is checked (`chats/start` and `focus` require write).
-4. Put it in a `.env` file in the project root (auto-loaded by `npm start`, gitignored):
+4. Save it to `~/.config/beeper-whatsapp-url/config` or `.env` in the project root:
 
 ```bash
 BEEPER_ACCESS_TOKEN=<your-token>
 ```
-
-## Run
-
-```bash
-npm start
-```
-
-The server listens on `http://127.0.0.1:8765`. For development with auto-restart: `npm run dev`.
 
 ## Usage
 

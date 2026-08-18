@@ -151,7 +151,7 @@ async function openChat(
   if (config.token === '') {
     throw new HttpError(
       500,
-      'BEEPER_ACCESS_TOKEN is not set. Get a token from Beeper Desktop (Settings -> Integrations) and add it to the .env file.',
+      'BEEPER_ACCESS_TOKEN is not set. Get a token from Beeper Desktop (Settings -> Integrations) and add it to ~/.config/beeper-whatsapp-url/config (or the file pointed to by BEEPER_CONFIG_FILE).',
     );
   }
   const result: ChatStartResult = await startWhatsAppChat(config, parsed);
@@ -314,7 +314,7 @@ if (isMain) {
     console.log(`beeper-whatsapp-url listening on http://${host}:${port}`);
     console.log(`Beeper API: ${config.baseUrl} | token: ${config.token === '' ? 'MISSING' : 'configured'}`);
     if (config.token === '') {
-      console.log('Set BEEPER_ACCESS_TOKEN (Beeper Desktop -> Settings -> API) to enable opening chats.');
+      console.log('Set BEEPER_ACCESS_TOKEN (Beeper Desktop -> Settings -> Integrations) in ~/.config/beeper-whatsapp-url/config to enable opening chats.');
     }
   });
 }
