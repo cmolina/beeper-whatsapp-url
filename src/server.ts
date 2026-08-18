@@ -122,9 +122,9 @@ async function handle(req: IncomingMessage, res: ServerResponse, config: BeeperC
 }
 
 /**
- * The DNR browser extension substitutes the target URL raw (regexSubstitution
- * cannot percent-encode), so any `&` in it leaks into the outer query string
- * and truncates `searchParams.get('url')`. Reconstruct from the raw query.
+ * Redirect rules substituting the target URL raw (e.g. without percent-encoding)
+ * can leak `&` from the target URL into the outer query string, which would
+ * truncate `searchParams.get('url')`. Reconstruct from the raw query if needed.
  */
 function resolveRedirectTarget(url: URL): string | null {
   const marker = 'url=';
@@ -209,10 +209,10 @@ function indexPage(config: BeeperConfig): string {
     `<h1>Beeper WhatsApp URL opener</h1>
     <p>Paste a WhatsApp click-to-chat link and it will open as a new chat in Beeper Desktop.</p>
     <form action="/redirect" method="get">
-      <input type="url" name="url" value="https://wa.me/56944897244?text=Hi" required>
+      <input type="url" name="url" value="https://wa.me/5491163544698?text=Hola%20mundo!" required>
       <button type="submit">Open in Beeper</button>
     </form>
-    <p>Programmatic: <code>/open?phone=NUMBER&amp;text=Hello</code></p>
+    <p>Programmatic: <code>/open?phone=5491163544698&amp;text=Hola+mundo!</code></p>
     <footer>Beeper API: ${escapeHtml(config.baseUrl)} &middot; token: ${config.token === '' ? 'MISSING' : 'configured'}</footer>`,
   );
 }

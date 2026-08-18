@@ -168,9 +168,8 @@ test('redirect parses an api.whatsapp.com link', async () => {
   assert.equal(body.text, 'Hola mundo!');
 });
 
-test('redirect tolerates a raw unencoded wa.me link (DNR extension style)', async () => {
-  // The browser extension's regexSubstitution cannot percent-encode, so the
-  // target arrives raw in the query string.
+test('redirect tolerates a raw unencoded wa.me link', async () => {
+  // Regex substitutions without percent-encoding pass the target raw in the query string.
   const { status, body } = await getJson(
     `${appUrl}/redirect?url=https://wa.me/5491163544698?text=Hola+mundo!&json=1`,
   );
@@ -179,7 +178,7 @@ test('redirect tolerates a raw unencoded wa.me link (DNR extension style)', asyn
   assert.equal(body.text, 'Hola mundo!');
 });
 
-test('redirect tolerates a raw api.whatsapp.com link with & inside (DNR extension style)', async () => {
+test('redirect tolerates a raw api.whatsapp.com link with & inside', async () => {
   // The raw `&text=` leaks into the outer query string and would truncate
   // searchParams.get('url') — the server must reconstruct the full target.
   const { status, body } = await getJson(
