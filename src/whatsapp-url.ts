@@ -5,9 +5,9 @@
  * Supported formats:
  *   - https://wa.me/<number>[?text=...]
  *   - https://api.whatsapp.com/send?phone=<number>[&text=...]
+ *   - https://web.whatsapp.com/send?phone=<number>[&text=...]
  *
- * chat.whatsapp.com group-invite links are explicitly rejected (no phone
- * number to start a DM with).
+ * chat.whatsapp.com group-invite links are explicitly rejected.
  */
 
 export interface ParsedWhatsAppUrl {
@@ -18,9 +18,6 @@ export interface ParsedWhatsAppUrl {
 /** Thrown when a URL is not a WhatsApp click-to-chat link we can handle. */
 export class UrlParseError extends Error {}
 
-const WA_ME_HOSTS = new Set(['wa.me', 'www.wa.me']);
-const API_HOSTS = new Set(['api.whatsapp.com', 'www.api.whatsapp.com']);
-
 export function parseWhatsAppUrl(raw: string): ParsedWhatsAppUrl {
   let url: URL;
   try {
@@ -30,40 +27,27 @@ export function parseWhatsAppUrl(raw: string): ParsedWhatsAppUrl {
   }
 
   const host = url.hostname.toLowerCase();
-
-  if (WA_ME_HOSTS.has(host)) {
-    const path = url.pathname.slice(1); // strip leading '/'
-    const number = path.split('/')[0];
-    if (!number) {
-      throw new UrlParseError('wa.me link is missing a phone number');
-    }
-    const text = url.searchParams.get('text') ?? undefined;
-    return { phone: normalizePhone(number), ...withText(text) };
+  if (!host.endsWith('wa.me') && !host.endsWith('whatsapp.com')) {
+    throw new UrlParseError(`Unsupported WhatsApp host: ${host}`);
   }
-
-  if (API_HOSTS.has(host)) {
-    if (!url.pathname.endsWith('/send')) {
-      throw new UrlParseError(`Unsupported api.whatsapp.com path: ${url.pathname}`);
-    }
-    const number = url.searchParams.get('phone');
-    if (!number) {
-      throw new UrlParseError('api.whatsapp.com/send link is missing the phone parameter');
-    }
-    const text = url.searchParams.get('text') ?? undefined;
-    return { phone: normalizePhone(number), ...withText(text) };
-  }
-
-  if (host === 'chat.whatsapp.com' || host === 'www.chat.whatsapp.com') {
+  if (host.includes('chat.whatsapp.com')) {
     throw new UrlParseError('chat.whatsapp.com group invite links cannot be opened as a phone-number chat');
   }
 
-  throw new UrlParseError(`Unsupported WhatsApp host: ${host}`);
+  const phone = url.searchParams.get('phone') || url.pathname.split('/').filter(Boolean)[0];
+  if (!phone || phone === 'send') {
+    throw new UrlParseError(`WhatsApp link is missing a phone number: ${raw}`);
+  }
+
+  const text = url.searchParams.get('text') || undefined;
+  return {
+    phone: normalizePhone(phone),
+    ...(text ? { text } : {}),
+  };
 }
 
 /**
- * Normalize a raw phone string to E.164-ish form: strip everything that is
- * not a digit and prepend "+". wa.me and api.whatsapp.com numbers are already
- * country-code based, so digits are kept as-is.
+ * Normalize a raw phone string to E.164-ish form: strip non-digits and prepend "+".
  */
 export function normalizePhone(raw: string): string {
   const digits = raw.replace(/[^\d]/g, '');
@@ -71,8 +55,4 @@ export function normalizePhone(raw: string): string {
     throw new UrlParseError(`Invalid phone number: ${raw}`);
   }
   return `+${digits}`;
-}
-
-function withText(text: string | undefined): Pick<ParsedWhatsAppUrl, 'text'> {
-  return text !== undefined && text !== '' ? { text } : {};
 }

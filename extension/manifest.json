@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Beeper WhatsApp URL",
+  "version": "0.1.0",
+  "description": "Redirect wa.me and api.whatsapp.com click-to-chat links to the local beeper-whatsapp-url bridge so they open as chats in Beeper Desktop.",
+  "permissions": ["declarativeNetRequest"],
+  "host_permissions": [
+    "https://wa.me/*",
+    "https://www.wa.me/*",
+    "https://api.whatsapp.com/*",
+    "https://www.api.whatsapp.com/*",
+    "http://127.0.0.1/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "beeper-whatsapp-redirect",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "minimum_chrome_version": "101"
+}

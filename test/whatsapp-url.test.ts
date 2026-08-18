@@ -4,29 +4,56 @@ import assert from 'node:assert/strict';
 import { normalizePhone, parseWhatsAppUrl, UrlParseError } from '../src/whatsapp-url.ts';
 
 test('wa.me with just a number', () => {
-  assert.deepEqual(parseWhatsAppUrl('https://wa.me/56944897244'), { phone: '+56944897244' });
+  assert.deepEqual(parseWhatsAppUrl('https://wa.me/5491163544698'), { phone: '+5491163544698' });
 });
 
 test('wa.me with pre-filled text', () => {
-  assert.deepEqual(parseWhatsAppUrl('https://wa.me/56944897244?text=Hello%20world'), {
-    phone: '+56944897244',
-    text: 'Hello world',
+  assert.deepEqual(parseWhatsAppUrl('https://wa.me/5491163544698?text=Hola%20mundo!'), {
+    phone: '+5491163544698',
+    text: 'Hola mundo!',
   });
 });
 
 test('wa.me number with a plus sign', () => {
-  assert.deepEqual(parseWhatsAppUrl('https://wa.me/+56944897244'), { phone: '+56944897244' });
+  assert.deepEqual(parseWhatsAppUrl('https://wa.me/+5491163544698'), { phone: '+5491163544698' });
 });
 
 test('api.whatsapp.com/send with phone and text', () => {
-  assert.deepEqual(parseWhatsAppUrl('https://api.whatsapp.com/send?phone=%2B56944897244&text=Hi%20there'), {
-    phone: '+56944897244',
-    text: 'Hi there',
+  assert.deepEqual(parseWhatsAppUrl('https://api.whatsapp.com/send?phone=%2B5491163544698&text=Hola%20mundo!'), {
+    phone: '+5491163544698',
+    text: 'Hola mundo!',
+  });
+});
+
+test('api.whatsapp.com/send/ with trailing slash, extra query params, and text', () => {
+  const raw =
+    'https://api.whatsapp.com/send/?phone=5491163544698&text=Hola+mundo%21&type=phone_number&app_absent=0';
+  assert.deepEqual(parseWhatsAppUrl(raw), {
+    phone: '+5491163544698',
+    text: 'Hola mundo!',
+  });
+});
+
+test('web.whatsapp.com/send with phone and text', () => {
+  assert.deepEqual(parseWhatsAppUrl('https://web.whatsapp.com/send?phone=5491163544698&text=Hola%20mundo!'), {
+    phone: '+5491163544698',
+    text: 'Hola mundo!',
+  });
+});
+
+test('wa.me with trailing slash', () => {
+  assert.deepEqual(parseWhatsAppUrl('https://wa.me/5491163544698/'), { phone: '+5491163544698' });
+});
+
+test('wa.me/?phone= query style', () => {
+  assert.deepEqual(parseWhatsAppUrl('https://wa.me/?phone=5491163544698&text=Hola%20mundo!'), {
+    phone: '+5491163544698',
+    text: 'Hola mundo!',
   });
 });
 
 test('empty text is omitted', () => {
-  assert.deepEqual(parseWhatsAppUrl('https://wa.me/56944897244?text='), { phone: '+56944897244' });
+  assert.deepEqual(parseWhatsAppUrl('https://wa.me/5491163544698?text='), { phone: '+5491163544698' });
 });
 
 test('chat.whatsapp.com group links are rejected', () => {
@@ -50,8 +77,8 @@ test('garbage input is rejected', () => {
 });
 
 test('normalizePhone strips formatting junk', () => {
-  assert.equal(normalizePhone('(56) 9 4489-7244'), '+56944897244');
-  assert.equal(normalizePhone('+56 9 4489 7244'), '+56944897244');
+  assert.equal(normalizePhone('+54 9 11 6354-4698'), '+5491163544698');
+  assert.equal(normalizePhone('+54 (9) 11 6354-4698'), '+5491163544698');
 });
 
 test('normalizePhone rejects numbers with no digits', () => {

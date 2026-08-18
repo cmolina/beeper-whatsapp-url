@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": {
+        "regexSubstitution": "http://127.0.0.1:8765/redirect?url=\\1"
+      }
+    },
+    "condition": {
+      "regexFilter": "^(https://(www\\.)?(wa\\.me|api\\.whatsapp\\.com)/.*)$",
+      "resourceTypes": ["main_frame"]
+    }
+  }
+]

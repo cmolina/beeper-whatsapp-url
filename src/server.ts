@@ -109,7 +109,7 @@ async function handle(req: IncomingMessage, res: ServerResponse, config: BeeperC
   }
 
   if (pathname === '/redirect') {
-    const target = url.searchParams.get('url');
+    const target = resolveRedirectTarget(url);
     if (!target) {
       throw new HttpError(400, 'Missing ?url= parameter');
     }
@@ -119,6 +119,24 @@ async function handle(req: IncomingMessage, res: ServerResponse, config: BeeperC
   }
 
   throw new HttpError(404, `Unknown path: ${pathname}`);
+}
+
+/**
+ * The DNR browser extension substitutes the target URL raw (regexSubstitution
+ * cannot percent-encode), so any `&` in it leaks into the outer query string
+ * and truncates `searchParams.get('url')`. Reconstruct from the raw query.
+ */
+function resolveRedirectTarget(url: URL): string | null {
+  const marker = 'url=';
+  const rawIdx = url.search.indexOf(marker);
+  if (rawIdx === -1) {
+    return url.searchParams.get('url');
+  }
+  const raw = url.search.slice(rawIdx + marker.length);
+  if (raw.startsWith('https://') || raw.startsWith('http://')) {
+    return raw;
+  }
+  return url.searchParams.get('url');
 }
 
 async function openChat(

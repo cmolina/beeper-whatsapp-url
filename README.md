@@ -60,7 +60,75 @@ Append `&json=1` (or `?json=1`) to any route to get a JSON response instead of H
 
 ## Point wa.me links at this server
 
-To make `wa.me` clicks open here instead of WhatsApp, route `wa.me` / `api.whatsapp.com` URLs to `http://127.0.0.1:8765/redirect?url=<encoded>`. How depends on your OS/browser — e.g. a browser extension that redirects specific hostnames, or an OS-level URL handler. The server just needs to be running for the links to resolve.
+To make `wa.me` / `api.whatsapp.com` clicks open here instead of WhatsApp, you can use the popular **Redirector** extension, the bundled unpacked extension (`extension/`), or **Finicky** (for system-wide link clicks).
+
+> **The server must be running** for redirected links to resolve — if it isn't, the click lands on a connection error page.
+
+### Option 1: Redirector extension (Recommended for Firefox & Chrome)
+
+[Redirector](https://github.com/einaregilsson/Redirector) ([Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/redirector/) / [Chrome Web Store](https://chromewebstore.google.com/detail/redirector/jegbdohdgebjljoljfeinojeobdabpjo)) is a permanent, store-signed extension that intercepts in-browser link clicks without needing temporary reloads after restarts.
+
+1. Install **Redirector** from your browser's add-on store.
+2. Click the Redirector icon in your toolbar and select **Edit Redirects** (or **Create new redirect**).
+3. Click **Create new redirect** and fill in:
+   - **Description**: `Beeper WhatsApp Redirect`
+   - **Example URL**: `https://wa.me/56944897244?text=Hola`
+   - **Include pattern**: `^(https?://(?:wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)/.*)$`
+   - **Redirect to**: `http://127.0.0.1:8765/redirect?url=$1`
+   - **Pattern type**: `Regular Expression`
+   - **Applies to**: `Main window (address bar)` (default)
+4. Click **Save**.
+
+### Option 2: Bundled Browser Extension (`extension/`)
+
+The repository includes a standalone Manifest V3 extension using `declarativeNetRequest`.
+
+#### Chrome / Edge / Arc / Orion
+1. Open `chrome://extensions` (Edge: `edge://extensions`).
+2. Enable **Developer mode** (toggle, top-right).
+3. Click **Load unpacked** and select the `extension/` folder.
+
+#### Firefox / Zen (Temporary Add-on)
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on…** and select `extension/manifest.json` (or `rules.json`).
+3. *Note: Temporary add-ons unload when Firefox restarts — use Redirector (Option 1) for a permanent setup.*
+
+### Option 3: Finicky (System-wide from Slack, Messages, Terminal, etc.)
+
+[Finicky](https://github.com/johnste/finicky) (`brew install finicky`, set as macOS default browser) captures `wa.me` clicks from *external apps* (Slack, Messages, Mail, Terminal `open`), routing them to this server.
+
+In `~/.finicky.ts` (or `~/.finicky.js`):
+
+```typescript
+export default {
+  defaultBrowser: "/Applications/Firefox Developer Edition.app",
+  rewrite: [
+    {
+      // Open WhatsApp click-to-chat links in Beeper via beeper-whatsapp-url server
+      match: [
+        "wa.me/*",
+        "api.whatsapp.com/*",
+        "web.whatsapp.com/*",
+      ],
+      url: ({ urlString }) =>
+        `http://127.0.0.1:8765/redirect?url=${encodeURIComponent(urlString)}`,
+    },
+  ],
+  handlers: [],
+};
+```
+
+> **Tip:** Use **Redirector** for links clicked *inside* your browser, and **Finicky** for links clicked in *external desktop apps*.
+
+### Verify
+
+Click a link like `https://wa.me/56944897244?text=Hola` (or type it in the address bar) — it should open Beeper Desktop with that chat selected and the draft pre-filled, instead of navigating to WhatsApp.
+
+The redirect target is passed raw (regex substitution cannot percent-encode), so `api.whatsapp.com/send?phone=…&text=…` arrives with its `&` intact — the `/redirect` handler reconstructs the full URL from the raw query string.
+
+### Notes
+
+- **Safari** is not supported: Safari Web Extensions lack reliable DNR redirect support (and this project ships without Xcode tooling).
 
 ## Configuration
 
