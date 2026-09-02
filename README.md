@@ -131,6 +131,8 @@ Click a link like `https://wa.me/5491163544698?text=Hola%20mundo!` (or open it f
 | `BEEPER_ACCESS_TOKEN` | — (required, from `.env`) | Beeper Desktop API token (Settings → Integrations → “+” → Approved connections) |
 | `BEEPER_BASE_URL` | `http://127.0.0.1:23373` | Beeper Desktop local API base URL |
 | `BEEPER_WHATSAPP_ACCOUNT` | auto-detected | Override the WhatsApp `accountID` (e.g. `local-whatsapp_ba_…`) |
+| `BEEPER_START_MAX_ATTEMPTS` | `3` | Max attempts for `/v1/chats/start` when Beeper returns `USER_NOT_FOUND` |
+| `BEEPER_START_RETRY_MS` | `1500` | Delay between `USER_NOT_FOUND` retries, in ms |
 | `PORT` | `8765` | Server listen port |
 | `HOST` | `127.0.0.1` | Server bind address |
 

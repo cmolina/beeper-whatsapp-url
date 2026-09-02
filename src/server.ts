@@ -46,6 +46,8 @@ export function createApp(env: NodeJS.ProcessEnv = process.env): Server {
     baseUrl: env.BEEPER_BASE_URL ?? 'http://127.0.0.1:23373',
     token: env.BEEPER_ACCESS_TOKEN ?? '',
     whatsappAccountOverride: env.BEEPER_WHATSAPP_ACCOUNT,
+    startChatMaxAttempts: positiveInt(env.BEEPER_START_MAX_ATTEMPTS, 3),
+    startChatRetryDelayMs: positiveInt(env.BEEPER_START_RETRY_MS, 1_500),
   };
 
   const server = createServer((req, res) => {
@@ -247,6 +249,14 @@ function withText(text: string | undefined): Pick<ParsedWhatsAppUrl, 'text'> {
   return text !== undefined && text !== '' ? { text } : {};
 }
 
+function positiveInt(raw: string | undefined, fallback: number): number {
+  if (raw === undefined) {
+    return fallback;
+  }
+  const n = Number.parseInt(raw, 10);
+  return Number.isNaN(n) || n <= 0 ? fallback : n;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => {
     switch (c) {
@@ -307,6 +317,8 @@ if (isMain) {
     baseUrl: process.env.BEEPER_BASE_URL ?? 'http://127.0.0.1:23373',
     token: process.env.BEEPER_ACCESS_TOKEN ?? '',
     whatsappAccountOverride: process.env.BEEPER_WHATSAPP_ACCOUNT,
+    startChatMaxAttempts: positiveInt(process.env.BEEPER_START_MAX_ATTEMPTS, 3),
+    startChatRetryDelayMs: positiveInt(process.env.BEEPER_START_RETRY_MS, 1_500),
   };
 
   const server = createApp();

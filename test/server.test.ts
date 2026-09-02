@@ -244,6 +244,93 @@ test('unreachable Beeper API surfaces a clear error', async () => {
   }
 });
 
+test('retries chats/start on USER_NOT_FOUND then succeeds', async () => {
+  let startCalls = 0;
+  const flaky = createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/v1/accounts') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify([{ accountID: 'local-whatsapp_ba_abc', network: 'WhatsApp' }]));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/v1/chats/start') {
+      req.resume();
+      startCalls += 1;
+      if (startCalls === 1) {
+        res.writeHead(404, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ message: 'User not found', code: 'USER_NOT_FOUND' }));
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ id: '!room:beeper.local', status: 'created' }));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/v1/focus') {
+      req.resume();
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+      return;
+    }
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end('{"error":"not found"}');
+  });
+  const flakyUrl = await listen(flaky);
+  const retryApp = createApp({
+    BEEPER_BASE_URL: flakyUrl,
+    BEEPER_ACCESS_TOKEN: 'test-token',
+    BEEPER_START_MAX_ATTEMPTS: '3',
+    BEEPER_START_RETRY_MS: '10',
+  });
+  const retryAppUrl = await listen(retryApp);
+  try {
+    const { status, body } = await getJson(`${retryAppUrl}/open?phone=524774014976&json=1`);
+    assert.equal(status, 200);
+    assert.equal(body.ok, true);
+    assert.equal(body.phone, '+524774014976');
+    assert.equal(body.chatId, '!room:beeper.local');
+    assert.equal(startCalls, 2);
+  } finally {
+    await closeServer(retryApp);
+    await closeServer(flaky);
+  }
+});
+
+test('does not retry chats/start on a non-USER_NOT_FOUND error', async () => {
+  let startCalls = 0;
+  const failing = createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/v1/accounts') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify([{ accountID: 'local-whatsapp_ba_abc', network: 'WhatsApp' }]));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/v1/chats/start') {
+      req.resume();
+      startCalls += 1;
+      res.writeHead(403, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ message: 'Forbidden', code: 'FORBIDDEN' }));
+      return;
+    }
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end('{"error":"not found"}');
+  });
+  const failingUrl = await listen(failing);
+  const noRetryApp = createApp({
+    BEEPER_BASE_URL: failingUrl,
+    BEEPER_ACCESS_TOKEN: 'test-token',
+    BEEPER_START_MAX_ATTEMPTS: '3',
+    BEEPER_START_RETRY_MS: '10',
+  });
+  const noRetryAppUrl = await listen(noRetryApp);
+  try {
+    const { status, body } = await getJson(`${noRetryAppUrl}/open?phone=524774014976&json=1`);
+    assert.equal(status, 500);
+    assert.match(body.error ?? '', /FORBIDDEN/);
+    assert.equal(startCalls, 1);
+  } finally {
+    await closeServer(noRetryApp);
+    await closeServer(failing);
+  }
+});
+
 test('unknown path returns 404', async () => {
   const { status, body } = await getJson(`${appUrl}/nope?json=1`);
   assert.equal(status, 404);

@@ -12,6 +12,23 @@ export interface BeeperConfig {
   readonly baseUrl: string;
   readonly token: string;
   readonly whatsappAccountOverride?: string;
+  /** Max attempts for /v1/chats/start when Beeper returns USER_NOT_FOUND. Default 3. */
+  readonly startChatMaxAttempts?: number;
+  /** Delay between USER_NOT_FOUND retries, in ms. Default 1500. */
+  readonly startChatRetryDelayMs?: number;
+}
+
+/** Thrown when the Beeper API responds with a non-2xx status. */
+export class BeeperApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(status: number, code: string | undefined, message: string) {
+    super(message);
+    this.name = 'BeeperApiError';
+    this.status = status;
+    this.code = code;
+  }
 }
 
 export interface ChatStartResult {
@@ -62,16 +79,41 @@ export async function startWhatsAppChat(
     body.messageText = parsed.text;
   }
 
-  const resp = await apiRequest<{ id?: string; chatID?: string; status?: string }>(
-    config,
-    '/v1/chats/start',
-    { method: 'POST', body: JSON.stringify(body) },
-  );
+  const maxAttempts = config.startChatMaxAttempts ?? 3;
+  const retryDelayMs = config.startChatRetryDelayMs ?? 1_500;
+  const request: RequestInit = { method: 'POST', body: JSON.stringify(body) };
 
-  return {
-    chatId: resp.id ?? resp.chatID ?? '',
-    status: resp.status ?? '',
-  };
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const resp = await apiRequest<{ id?: string; chatID?: string; status?: string }>(
+        config,
+        '/v1/chats/start',
+        request,
+      );
+      return {
+        chatId: resp.id ?? resp.chatID ?? '',
+        status: resp.status ?? '',
+      };
+    } catch (err) {
+      if (attempt < maxAttempts && isUserNotFound(err)) {
+        console.warn(
+          `chats/start returned USER_NOT_FOUND for ${parsed.phone}; retrying in ${retryDelayMs}ms (attempt ${attempt}/${maxAttempts})`,
+        );
+        await delay(retryDelayMs);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('chats/start failed');
+}
+
+function isUserNotFound(err: unknown): boolean {
+  return err instanceof BeeperApiError && err.code === 'USER_NOT_FOUND';
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** Find the accountID of the user's WhatsApp account, preferring on-device connections. */
@@ -124,8 +166,18 @@ async function apiRequest<T>(config: BeeperConfig, path: string, init?: RequestI
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
+    let code: string | undefined;
+    try {
+      code = (JSON.parse(body) as { code?: string }).code;
+    } catch {
+      // non-JSON error body
+    }
     const method = init?.method ?? 'GET';
-    throw new Error(`Beeper API ${method} ${path} failed: HTTP ${res.status} ${res.statusText} — ${body.slice(0, 300)}`);
+    throw new BeeperApiError(
+      res.status,
+      code,
+      `Beeper API ${method} ${path} failed: HTTP ${res.status} ${res.statusText} — ${body.slice(0, 300)}`,
+    );
   }
 
   return (await res.json()) as T;
