@@ -45,7 +45,15 @@ brew update
 brew upgrade beeper-whatsapp-url
 brew services restart beeper-whatsapp-url
 
-sleep 2
-curl -fsS http://127.0.0.1:8765/health
+# launchd starts the service asynchronously; wait for it to bind.
+tries=0
+until curl -fsS http://127.0.0.1:8765/health; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 15 ]; then
+    echo "error: service did not answer on http://127.0.0.1:8765" >&2
+    exit 1
+  fi
+  sleep 1
+done
 echo
 brew list --versions beeper-whatsapp-url
