@@ -200,6 +200,33 @@ test('redirect handles complex /send/ URL with multiple parameters and nested UR
   assert.equal(body.text, 'Hola mundo!');
 });
 
+test('redirect resolves a wa.me/message short link through WhatsApp', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const href = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (href.startsWith('https://wa.me/message/')) {
+      return new Response('<a href="https://web.whatsapp.com/send?autoload=1&amp;phone=56954546574&amp;text">');
+    }
+    return realFetch(input, init);
+  }) as typeof fetch;
+  try {
+    // The URL that used to 400: a short link with Instagram tracking params.
+    const target = encodeURIComponent(
+      'https://wa.me/message/5L374KOPQ6ZTJ1?utm_source=ig&utm_medium=social&utm_content=link_in_bio',
+    );
+    const { status, body } = await getJson(`${appUrl}/redirect?url=${target}&json=1`);
+    assert.equal(status, 200);
+    assert.equal(body.ok, true);
+    assert.equal(body.phone, '+56954546574');
+    assert.deepEqual(startRequests.at(-1), {
+      accountID: 'local-whatsapp_ba_abc',
+      user: { phoneNumber: '+56954546574' },
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('chat.whatsapp.com group link returns 400', async () => {
   const target = encodeURIComponent('https://chat.whatsapp.com/abc123');
   const { status, body } = await getJson(`${appUrl}/redirect?url=${target}&json=1`);

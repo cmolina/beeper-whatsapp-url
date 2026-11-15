@@ -21,8 +21,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { normalizePhone, parseWhatsAppUrl, UrlParseError } from './whatsapp-url.ts';
+import { normalizePhone, parseWhatsAppUrl, UrlParseError, WhatsAppShortLinkError } from './whatsapp-url.ts';
 import type { ParsedWhatsAppUrl } from './whatsapp-url.ts';
+import { resolveWhatsAppShortLink } from './whatsapp-short-link.ts';
 import { startWhatsAppChat, focusChat } from './beeper-client.ts';
 import type { BeeperConfig, ChatStartResult, FocusResult } from './beeper-client.ts';
 
@@ -118,7 +119,17 @@ async function handle(req: IncomingMessage, res: ServerResponse, config: BeeperC
     if (!target) {
       throw new HttpError(400, 'Missing ?url= parameter');
     }
-    const parsed = parseWhatsAppUrl(target);
+    let parsed: ParsedWhatsAppUrl;
+    try {
+      parsed = parseWhatsAppUrl(target);
+    } catch (err) {
+      if (!(err instanceof WhatsAppShortLinkError)) {
+        throw err;
+      }
+      // wa.me/message/<code> links hide the number; WhatsApp's page has it.
+      const phone = await resolveWhatsAppShortLink(err.code);
+      parsed = { phone, ...withText(new URL(target).searchParams.get('text') ?? undefined) };
+    }
     await openChat(parsed, json, res, config);
     return;
   }

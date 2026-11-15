@@ -10,8 +10,9 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "dev": "node --watch --experimental-strip-types src/server.ts",
-    "test": "node --experimental-strip-types --test test/whatsapp-url.test.ts test/server.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node --experimental-strip-types --test test/whatsapp-url.test.ts test/whatsapp-short-link.test.ts test/server.test.ts",
+    "typecheck": "tsc --noEmit",
+    "release": "bash scripts/release.sh"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

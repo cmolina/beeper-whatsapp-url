@@ -72,6 +72,8 @@ Append `&json=1` (or `?json=1`) to any route to get a JSON response instead of H
 
 **Note:** `chat.whatsapp.com` group-invite links are rejected with a 400 — this tool is for one-to-one chat links only.
 
+**Short links:** `wa.me/message/<code>` links (created by WhatsApp Business) contain no phone number. The server fetches the link once to read the number WhatsApp resolves it to, then opens the chat in Beeper. This needs outbound internet access; if the link is expired or WhatsApp can't be reached, you get a 400 explaining why.
+
 ## Point wa.me links at this server
 
 To ensure WhatsApp links open in Beeper regardless of where they are clicked, **both** in-browser and system-wide redirect rules are needed:
@@ -141,6 +143,16 @@ The WhatsApp account is auto-detected from `GET /v1/accounts` (preferring on-dev
 ## Tests
 
 ```bash
-npm test            # 32 tests (parser unit + server integration with mock Beeper)
+npm test            # 41 tests (parser unit + short-link resolver + server integration with mock Beeper)
 npm run typecheck   # tsc --noEmit
 ```
+
+## Release
+
+Commit your changes, then:
+
+```bash
+npm run release -- minor   # or patch / major
+```
+
+That runs the tests, bumps `package.json`, commits and tags `vX.Y.Z`, pushes, updates `cmolina/homebrew-tap` with the new tarball checksum, then upgrades and restarts the local Homebrew install. Set `TAP_DIR` if your tap clone isn't at `~/code/homebrew-tap`.

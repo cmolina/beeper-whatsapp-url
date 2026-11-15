@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { normalizePhone, parseWhatsAppUrl, UrlParseError } from '../src/whatsapp-url.ts';
+import { normalizePhone, parseWhatsAppUrl, UrlParseError, WhatsAppShortLinkError } from '../src/whatsapp-url.ts';
 
 test('wa.me with just a number', () => {
   assert.deepEqual(parseWhatsAppUrl('https://wa.me/5491163544698'), { phone: '+5491163544698' });
@@ -74,6 +74,17 @@ test('unsupported host is rejected', () => {
 
 test('garbage input is rejected', () => {
   assert.throws(() => parseWhatsAppUrl('not a url'), UrlParseError);
+});
+
+test('wa.me/message short links report their code instead of a phone', () => {
+  assert.throws(
+    () => parseWhatsAppUrl('https://wa.me/message/5L374KOPQ6ZTJ1?utm_source=ig'),
+    (err: unknown) => err instanceof WhatsAppShortLinkError && err.code === '5L374KOPQ6ZTJ1',
+  );
+});
+
+test('wa.me/message short link without a code is rejected', () => {
+  assert.throws(() => parseWhatsAppUrl('https://wa.me/message/'), UrlParseError);
 });
 
 test('normalizePhone strips formatting junk', () => {
